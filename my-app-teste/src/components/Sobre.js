@@ -1,7 +1,7 @@
 function Sobre(){
     return (
         <div>
-            <p>Está é a pagina sobre</p>
+            <p>TESTE REFERENTE A VAGA DE DESENVOLVEDOR</p>
         </div>
     )
 }

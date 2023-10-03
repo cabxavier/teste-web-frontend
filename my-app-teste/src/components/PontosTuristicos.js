@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Table, Form } from 'react-bootstrap';
 import Modal from 'react-bootstrap/Modal';
+import InputGroup from 'react-bootstrap/InputGroup';
 
 class PontosTuristicos extends React.Component {
 
@@ -11,9 +12,11 @@ class PontosTuristicos extends React.Component {
             idPontoTuristico: 0,
             nome: '',
             descricao: '',
+            idEstado: 0,
             idCidade: 0,
             referencia: '',
             pontosTuristicos: [],
+            pontosTuristicosFiltro: [],
             estados: [],
             cidades: [],
             modalAberta: false
@@ -24,12 +27,10 @@ class PontosTuristicos extends React.Component {
         this.buscarPontoTuristico();
     };
 
-    componentWillUnmount() {
+    componentWillUnmount() {};
 
-    };
-
-    buscarEstados = () => {
-        fetch("http://localhost:54303/api/estados")
+    buscarEstados = (idEstado) => {
+        fetch("http://localhost:54303/api/" + idEstado + "/estados")
             .then(resposta => resposta.json())
             .then(dados => {
                 this.setState({ estados: dados, cidades: [] })
@@ -48,7 +49,7 @@ class PontosTuristicos extends React.Component {
         fetch("http://localhost:54303/api/pontos-turisticos")
             .then(resposta => resposta.json())
             .then(dados => {
-                this.setState({ pontosTuristicos: dados })
+                this.setState({ pontosTuristicos: dados, pontosTuristicosFiltro: dados })
             });
     };
 
@@ -68,32 +69,36 @@ class PontosTuristicos extends React.Component {
     };
 
     carregarDadosPontoTuristico = (idPontoTuristico) => {
-        fetch("https://localhost:5001/api/pontosTuristicos/" + idPontoTuristico, { method: 'GET' })
+        fetch("http://localhost:54303/api/" + idPontoTuristico + "/pontos-turisticos", { method: 'GET' })
             .then(resposta => resposta.json())
             .then(dado => {
                 this.setState({
-                    idPontoTuristico: dado.idPontoTuristico,
-                    nome: dado.nome,
-                    descricao: dado.descricao,
-                    referencia: dado.referencia
+                    idPontoTuristico: dado[0].idPontoTuristico,
+                    nome: dado[0].nome,
+                    descricao: dado[0].descricao,
+                    idEstado: dado[0].idEstado,
+                    idCidade: dado[0].idCidade,
+                    referencia: dado[0].referencia
                 });
+
+                this.buscarEstados(0);
+                this.buscarCidades(dado[0].idEstado);
                 this.abrirModal();
             });
     };
 
     atualizarPontoTuristico = (pontoTuristico) => {
-        fetch("https://localhost:5001/api/pontosTuristicos/" + pontoTuristico.idPontoTuristico,
+        fetch("http://localhost:54303/api/pontos-turisticos/atualizar/" + pontoTuristico.idPontoTuristico,
             {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(pontoTuristico)
             })
             .then(resposta => {
-                if (resposta.ok) {
-                    this.buscarPontoTuristico();
-                } else {
-                    alert("Não foi possível atualizar o ponto turístico! " + resposta.internalServerError)
+                if (!resposta.ok) {
+                    alert("Não foi possível atualizar o ponto turístico! Error:" + resposta.statusText);
                 }
+                this.buscarPontoTuristico();
             });
     };
 
@@ -101,9 +106,10 @@ class PontosTuristicos extends React.Component {
         if (window.confirm("Deseja realmente excluir ?")) {
             fetch("http://localhost:54303/api/pontos-turisticos/" + idPontoTuristico + "/excluir", { method: 'DELETE' })
                 .then(resposta => {
-                    if (resposta.ok) {
-                        this.buscarPontoTuristico();
+                    if (!resposta.ok) {
+                        alert("Não foi possível excluir o ponto turístico! Error:" + resposta.statusText);
                     }
+                    this.buscarPontoTuristico();
                 });
         }
     };
@@ -132,11 +138,17 @@ class PontosTuristicos extends React.Component {
         );
     };
 
-    pegarIdEstado = (e) => {
+    atualizarIdEstado = (e) => {
         this.buscarCidades(e.target.value);
+
+        this.setState(
+            {
+                idEstado: e.target.value
+            }
+        );
     }
 
-    pegarIdCidade = (e) => {
+    atualizarIdCidade = (e) => {
         this.setState(
             {
                 idCidade: e.target.value
@@ -158,8 +170,20 @@ class PontosTuristicos extends React.Component {
             return false;
         }
 
+        if (this.state.idEstado === 0) {
+            alert("Informe o estado");
+            document.getElementById('ddlEstado').focus();
+            return false;
+        }
+
+        if (this.state.idCidade === 0) {
+            alert("Informe o cidade");
+            document.getElementById('ddlCidade').focus();
+            return false;
+        }
+
         const pontoTuristico = {
-            idPontoTuristico: this.idPontoTuristico,
+            idPontoTuristico: this.state.idPontoTuristico,
             nome: this.state.nome,
             descricao: this.state.descricao,
             idCidade: this.state.idCidade,
@@ -183,11 +207,12 @@ class PontosTuristicos extends React.Component {
             idPontoTuristico: 0,
             nome: '',
             descricao: '',
+            idEstado: 0,
+            idCidade: 0,
             referencia: ''
         });
 
-        this.buscarEstados();
-
+        this.buscarEstados(0);
         this.abrirModal();
     };
 
@@ -202,6 +227,59 @@ class PontosTuristicos extends React.Component {
             modalAberta: false
         });
     };
+
+    filtroPontoTuristico = (e) => {
+        const inputValue = e.target.value;
+        const data = this.searchTable(inputValue, this.state.pontosTuristicos);
+        this.setState({
+            pontosTuristicos: data
+        });
+    }
+
+    searchTable = (value, data) => {
+        let tabelaFiltro = [];
+
+        if (value.length === 0) {
+            return tabelaFiltro = this.state.pontosTuristicosFiltro;
+        }
+
+        for (let i = 0; i < data.length; i++) {
+            value = value.toLowerCase();
+            let nome = data[i].nome.toLowerCase();
+            let descricao = data[i].descricao.toLowerCase();
+            let cidade = data[i].cidade.toLowerCase();
+            let estado = data[i].estado.toLowerCase();
+            if (nome.includes(value)) {
+                tabelaFiltro.push(data[i]);
+            }
+            if (descricao.includes(value)) {
+                tabelaFiltro.push(data[i]);
+            }
+            if (cidade.includes(value)) {
+                tabelaFiltro.push(data[i]);
+            }
+            if (estado.includes(value)) {
+                tabelaFiltro.push(data[i]);
+            }
+        }
+
+        if (tabelaFiltro.length <= 0) {
+            tabelaFiltro = this.state.pontosTuristicosFiltro;
+        } else {
+            tabelaFiltro = this.removeRegistroDuplicado(tabelaFiltro);
+        }
+        return tabelaFiltro;
+    }
+
+    removeRegistroDuplicado = (tabelaFiltro) => {
+        let unique = [];
+        tabelaFiltro.forEach(elmento => {
+            if (!unique.includes(elmento)) {
+                unique.push(elmento);
+            }
+        });
+        return unique;
+    }
 
     renderTabela() {
         return (
@@ -240,61 +318,57 @@ class PontosTuristicos extends React.Component {
     render() {
         return (
             <div>
-
                 <Modal show={this.state.modalAberta} onHide={this.fecharModal}>
                     <Modal.Header closeButton>
                         <Modal.Title>DADOS DO PONTO TURÍSTICO</Modal.Title>
                     </Modal.Header>
                     <Modal.Body>
                         <Form>
-
                             <Form.Group className="mb-3">
-                                <Form.Label>Nome</Form.Label>
-                                <Form.Control id="txtNome" type="text" placeholder="Digite o nome" value={this.state.nome} onChange={this.atualizarNome} required />
+                                <Form.Label>NOME</Form.Label>
+                                <Form.Control id="txtNome" type="text" maxLength={100} placeholder="INFORME O NOME" value={this.state.nome} onChange={this.atualizarNome} required />
                             </Form.Group>
                             <Form.Group className="mb-3">
-                                <Form.Label>Descrição</Form.Label>
-                                <Form.Control id="txtDescricao" type="text" placeholder="Digite a descrição" value={this.state.descricao} onChange={this.atualizarDescricao} required />
+                                <Form.Label>DESCRIÇÃO</Form.Label>
+                                <Form.Control id="txtDescricao" type="text" maxLength={100} placeholder="INFORME A DESCRIÇÃO" value={this.state.descricao} onChange={this.atualizarDescricao} required />
                             </Form.Group>
-
                             <Form.Group className="mb-3">
-                                <Form.Label htmlFor="estado">Estado</Form.Label>
-                                <select id="estado" onChange={this.pegarIdEstado}>
-                                    <option value="0" required>Selecione um Estado</option>
+                                <Form.Label htmlFor="ddlEstado">Estado</Form.Label>
+                                <Form.Select id="ddlEstado" value={this.state.idEstado} onChange={this.atualizarIdEstado}>
+                                    <option value="0" required>SELECIONE UM ESTADO</option>
                                     {this.state.estados.map((estado) => {
                                         const { idEstado, descricao } = estado;
                                         return (<option key={idEstado} value={idEstado}>{descricao}</option>)
                                     })}
-                                </select>
+                                </Form.Select>
                             </Form.Group>
-
                             <Form.Group className="mb-3">
-                                <Form.Label htmlFor="cidade">Cidade</Form.Label>
-                                <select id="cidade" onChange={this.pegarIdCidade}>
-                                    <option value="0" required>Selecione uma Cidade</option>
+                                <Form.Label htmlFor="ddlCidade">Cidade</Form.Label>
+                                <Form.Select id="ddlCidade" value={this.state.idCidade} onChange={this.atualizarIdCidade}>
+                                    <option value="0" required>SELECIONE UMA CIDADE</option>
                                     {this.state.cidades.map((cidade) => {
                                         const { idCidade, descricao } = cidade;
                                         return (<option key={idCidade} value={idCidade}>{descricao}</option>)
                                     })}
-                                </select>
+                                </Form.Select>
                             </Form.Group>
-
-                            <Form.Group className="mb-3">
-                                <Form.Label>Referência</Form.Label>
-                                <Form.Control id="txtReferencia" type="text" placeholder="Digite a referência" value={this.state.referencia} onChange={this.atualizarReferencia} />
+                            <Form.Group className="mb-3" controlId="txtReferencia">
+                                <Form.Label>REFERÊNCIA</Form.Label>
+                                <Form.Control as="textarea" rows={3} maxLength={100} placeholder="INFORME A REFERÊNCIA" value={this.state.referencia} onChange={this.atualizarReferencia} />
                             </Form.Group>
-
                         </Form>
-
                     </Modal.Body>
                     <Modal.Footer>
                         <Button variant="secondary" onClick={this.fecharModal}>Fechar</Button>
                         <Button variant="primary" type="submit" onClick={this.submit}>Salvar</Button>
                     </Modal.Footer>
                 </Modal>
-
                 <Button variant="warning" type="submit" onClick={this.reset}>Novo</Button>
-
+                <InputGroup className="mb-3">
+                    <InputGroup.Text id="basic-addon1">@</InputGroup.Text>
+                    <Form.Control placeholder="FILTRO" onChange={this.filtroPontoTuristico}
+                    />
+                </InputGroup>
                 {this.renderTabela()}
             </div>
         )
