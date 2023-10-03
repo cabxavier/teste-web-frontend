@@ -11,14 +11,12 @@ class PontosTuristicos extends React.Component {
             idPontoTuristico: 0,
             nome: '',
             descricao: '',
-            pontosTuristicos: [
-                { 'idPontoTuristico': 1, 'nome': 'Teste Nome 1', 'descricao': 'Teste Descrição 1' },
-                { 'idPontoTuristico': 2, 'nome': 'Teste Nome 2', 'descricao': 'Teste Descrição 2' }
-            ],
-
+            idCidade: 0,
+            referencia: '',
+            pontosTuristicos: [],
+            estados: [],
+            cidades: [],
             modalAberta: false
-
-            //pontosTuristicos: []
         }
     };
 
@@ -30,27 +28,42 @@ class PontosTuristicos extends React.Component {
 
     };
 
+    buscarEstados = () => {
+        fetch("http://localhost:54303/api/estados")
+            .then(resposta => resposta.json())
+            .then(dados => {
+                this.setState({ estados: dados, cidades: [] })
+            });
+    };
+
+    buscarCidades = (idEstado) => {
+        fetch("http://localhost:54303/api/estados/" + idEstado + "/cidades")
+            .then(resposta => resposta.json())
+            .then(dados => {
+                this.setState({ cidades: dados })
+            });
+    };
+
     buscarPontoTuristico = () => {
-        /*fetch("https://localhost:5001/api/pontosTuristicos")
-                    .then(resposta => resposta.json())
-                    .then(dados => {
-                        this.setState({ pontosTuristicos: dados })
-                    });*/
+        fetch("http://localhost:54303/api/pontos-turisticos")
+            .then(resposta => resposta.json())
+            .then(dados => {
+                this.setState({ pontosTuristicos: dados })
+            });
     };
 
     cadastrarPontoTuristico = (pontoTuristico) => {
-        fetch("https://localhost:5001/api/pontosTuristicos/",
+        fetch("http://localhost:54303/api/pontos-turisticos/novo",
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(pontoTuristico)
             })
             .then(resposta => {
-                if (resposta.ok) {
-                    this.buscarPontoTuristico();
-                } else {
-                    alert("Não foi possível adicionar o ponto turístico!")
+                if (!resposta.ok) {
+                    alert("Não foi possível cadastrar o ponto turístico! Error:" + resposta.statusText);
                 }
+                this.buscarPontoTuristico();
             });
     };
 
@@ -61,7 +74,8 @@ class PontosTuristicos extends React.Component {
                 this.setState({
                     idPontoTuristico: dado.idPontoTuristico,
                     nome: dado.nome,
-                    descricao: dado.descricao
+                    descricao: dado.descricao,
+                    referencia: dado.referencia
                 });
                 this.abrirModal();
             });
@@ -78,14 +92,14 @@ class PontosTuristicos extends React.Component {
                 if (resposta.ok) {
                     this.buscarPontoTuristico();
                 } else {
-                    alert("Não foi possível atualizar o ponto turístico!")
+                    alert("Não foi possível atualizar o ponto turístico! " + resposta.internalServerError)
                 }
             });
     };
 
     deletarPontoTuristico = (idPontoTuristico) => {
         if (window.confirm("Deseja realmente excluir ?")) {
-            fetch("https://localhost:5001/api/pontosTuristicos/" + idPontoTuristico, { method: 'DELETE' })
+            fetch("http://localhost:54303/api/pontos-turisticos/" + idPontoTuristico + "/excluir", { method: 'DELETE' })
                 .then(resposta => {
                     if (resposta.ok) {
                         this.buscarPontoTuristico();
@@ -110,6 +124,26 @@ class PontosTuristicos extends React.Component {
         );
     };
 
+    atualizarReferencia = (e) => {
+        this.setState(
+            {
+                referencia: e.target.value
+            }
+        );
+    };
+
+    pegarIdEstado = (e) => {
+        this.buscarCidades(e.target.value);
+    }
+
+    pegarIdCidade = (e) => {
+        this.setState(
+            {
+                idCidade: e.target.value
+            }
+        );
+    }
+
     submit = () => {
 
         if (!this.state.nome) {
@@ -127,7 +161,10 @@ class PontosTuristicos extends React.Component {
         const pontoTuristico = {
             idPontoTuristico: this.idPontoTuristico,
             nome: this.state.nome,
-            descricao: this.state.nome
+            descricao: this.state.descricao,
+            idCidade: this.state.idCidade,
+            referencia: this.state.referencia,
+            dataIncluscao: ''
         }
 
         if (this.state.idPontoTuristico === 0) {
@@ -145,8 +182,11 @@ class PontosTuristicos extends React.Component {
         this.setState({
             idPontoTuristico: 0,
             nome: '',
-            descricao: ''
+            descricao: '',
+            referencia: ''
         });
+
+        this.buscarEstados();
 
         this.abrirModal();
     };
@@ -170,6 +210,9 @@ class PontosTuristicos extends React.Component {
                     <tr>
                         <th>Nome</th>
                         <th>Descrição</th>
+                        <th>Cidade</th>
+                        <th>Estado</th>
+                        <th>Referência</th>
                         <th>Opções</th>
                     </tr>
                 </thead>
@@ -179,6 +222,9 @@ class PontosTuristicos extends React.Component {
                             <tr key={pontoTuristico.idPontoTuristico}>
                                 <td>{pontoTuristico.nome}</td>
                                 <td>{pontoTuristico.descricao}</td>
+                                <td>{pontoTuristico.cidade}</td>
+                                <td>{pontoTuristico.estado}</td>
+                                <td>{pontoTuristico.referencia}</td>
                                 <td>
                                     <Button variant="secondary" onClick={() => this.carregarDadosPontoTuristico(pontoTuristico.idPontoTuristico)}>Atualizar</Button>
                                     <Button variant="danger" onClick={() => this.deletarPontoTuristico(pontoTuristico.idPontoTuristico)}>Excluir</Button>
@@ -209,6 +255,33 @@ class PontosTuristicos extends React.Component {
                             <Form.Group className="mb-3">
                                 <Form.Label>Descrição</Form.Label>
                                 <Form.Control id="txtDescricao" type="text" placeholder="Digite a descrição" value={this.state.descricao} onChange={this.atualizarDescricao} required />
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label htmlFor="estado">Estado</Form.Label>
+                                <select id="estado" onChange={this.pegarIdEstado}>
+                                    <option value="0" required>Selecione um Estado</option>
+                                    {this.state.estados.map((estado) => {
+                                        const { idEstado, descricao } = estado;
+                                        return (<option key={idEstado} value={idEstado}>{descricao}</option>)
+                                    })}
+                                </select>
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label htmlFor="cidade">Cidade</Form.Label>
+                                <select id="cidade" onChange={this.pegarIdCidade}>
+                                    <option value="0" required>Selecione uma Cidade</option>
+                                    {this.state.cidades.map((cidade) => {
+                                        const { idCidade, descricao } = cidade;
+                                        return (<option key={idCidade} value={idCidade}>{descricao}</option>)
+                                    })}
+                                </select>
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label>Referência</Form.Label>
+                                <Form.Control id="txtReferencia" type="text" placeholder="Digite a referência" value={this.state.referencia} onChange={this.atualizarReferencia} />
                             </Form.Group>
 
                         </Form>
