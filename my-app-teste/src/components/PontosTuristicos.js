@@ -4,7 +4,6 @@ import Modal from 'react-bootstrap/Modal';
 import InputGroup from 'react-bootstrap/InputGroup';
 
 class PontosTuristicos extends React.Component {
-
     constructor(props) {
         super(props);
 
