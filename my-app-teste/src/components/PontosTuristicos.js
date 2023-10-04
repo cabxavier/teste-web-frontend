@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Button, Table, Form } from 'react-bootstrap';
 import Modal from 'react-bootstrap/Modal';
 import InputGroup from 'react-bootstrap/InputGroup';
+import Pagination from './Pagination';
 
 class PontosTuristicos extends Component {
 
@@ -20,6 +21,9 @@ class PontosTuristicos extends Component {
             estados: [],
             cidades: [],
             modalAberta: false,
+            pontosTuristicosCurrent: [],
+            currentPage: 1,
+            totalPages: 0
         }
     };
 
@@ -33,7 +37,7 @@ class PontosTuristicos extends Component {
         fetch("http://localhost:54303/api/" + idEstado + "/estado")
             .then(resposta => resposta.json())
             .then(dados => {
-                this.setState({ estados: dados, cidades: [] })
+                this.setState({ estados: dados, cidades: [] });
             });
     };
 
@@ -41,7 +45,7 @@ class PontosTuristicos extends Component {
         fetch("http://localhost:54303/api/estado/" + idEstado + "/cidade")
             .then(resposta => resposta.json())
             .then(dados => {
-                this.setState({ cidades: dados, idCidade: idEstado === 0 ? 0 : this.state.idCidade })
+                this.setState({ cidades: dados, idCidade: idEstado === 0 ? 0 : this.state.idCidade });
             });
     };
 
@@ -49,7 +53,7 @@ class PontosTuristicos extends Component {
         fetch("http://localhost:54303/api/ponto-turistico")
             .then(resposta => resposta.json())
             .then(dados => {
-                this.setState({ pontosTuristicos: dados, pontosTuristicosFiltro: dados })
+                this.setState({ pontosTuristicos: dados, pontosTuristicosFiltro: dados });
             });
     };
 
@@ -110,6 +114,7 @@ class PontosTuristicos extends Component {
                         alert("Não foi possível excluir o ponto turístico! Error:" + resposta.statusText);
                     }
                     this.buscarPontoTuristico();
+                    window.location.reload(true);
                 });
         }
     };
@@ -232,13 +237,14 @@ class PontosTuristicos extends Component {
         this.setState({
             modalAberta: false
         });
+        window.location.reload(true);
     };
 
     filtroPontoTuristico = (e) => {
         const inputValue = e.target.value;
         const data = this.searchTable(inputValue, this.state.pontosTuristicos);
         this.setState({
-            pontosTuristicos: data
+            pontosTuristicosCurrent: data
         });
     }
 
@@ -269,11 +275,10 @@ class PontosTuristicos extends Component {
             }
         }
 
-        if (tabelaFiltro.length <= 0) {
-            tabelaFiltro = this.state.pontosTuristicosFiltro;
-        } else {
+        if (tabelaFiltro.length > 0) {
             tabelaFiltro = this.removeRegistroDuplicado(tabelaFiltro);
         }
+
         return tabelaFiltro;
     }
 
@@ -288,7 +293,17 @@ class PontosTuristicos extends Component {
         return unique;
     }
 
-    renderTabela() {
+    onPageChanged = data => {
+        const { pontosTuristicos } = this.state;
+        const { currentPage, totalPages, pageLimit } = data;
+
+        const offset = (currentPage - 1) * pageLimit;
+        const pontosTuristicosCurrent = pontosTuristicos.slice(offset, offset + pageLimit);
+
+        this.setState({ currentPage, pontosTuristicosCurrent, totalPages });
+    }
+
+    renderTabela(pontosTuristicos) {
         return (
             <Table striped bordered hover>
                 <thead>
@@ -303,7 +318,7 @@ class PontosTuristicos extends Component {
                 </thead>
                 <tbody>
                     {
-                        this.state.pontosTuristicos.map((pontoTuristico) =>
+                        pontosTuristicos.map((pontoTuristico) =>
                             <tr key={pontoTuristico.idPontoTuristico}>
                                 <td>{pontoTuristico.nome}</td>
                                 <td>{pontoTuristico.descricao}</td>
@@ -318,13 +333,11 @@ class PontosTuristicos extends Component {
                         )
                     }
                 </tbody>
-
-
             </Table>
         )
     }
 
-    render() {
+    renderGrid() {
         return (
             <div>
                 <Modal show={this.state.modalAberta} onHide={this.fecharModal}>
@@ -372,13 +385,107 @@ class PontosTuristicos extends Component {
                         <Button variant="primary" type="submit" onClick={this.submit}>Salvar</Button>
                     </Modal.Footer>
                 </Modal>
+                <div className="py-1"></div>
                 <Button variant="warning" type="submit" onClick={this.reset}>Novo</Button>
-                <InputGroup className="mb-3">
+                <InputGroup className="mb-3 py-1">
                     <InputGroup.Text id="basic-addon1">@</InputGroup.Text>
                     <Form.Control placeholder="FILTRO" onChange={this.filtroPontoTuristico}
                     />
                 </InputGroup>
-                {this.renderTabela()}
+
+                {this.renderTabela(this.state.pontosTuristicos)}
+            </div>
+        );
+    }
+
+    render() {
+
+        const { pontosTuristicos, pontosTuristicosCurrent, currentPage, totalPages } = this.state;
+        const totalPontosTuristicos = pontosTuristicos.length;
+
+        if (totalPontosTuristicos === 0) {
+            return this.renderGrid();
+        }
+
+        const headerClass = ['text-dark py-2 pr-4 m-0', currentPage ? 'border-gray border-right' : ''].join(' ').trim();
+
+        return (
+            <div>
+                <Modal show={this.state.modalAberta} onHide={this.fecharModal}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>DADOS DO PONTO TURÍSTICO</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <Form>
+                            <Form.Group className="mb-3">
+                                <Form.Label>NOME</Form.Label>
+                                <Form.Control id="txtNome" type="text" maxLength={100} placeholder="INFORME O NOME" value={this.state.nome} onChange={this.atualizarNome} required />
+                            </Form.Group>
+                            <Form.Group className="mb-3">
+                                <Form.Label>DESCRIÇÃO</Form.Label>
+                                <Form.Control id="txtDescricao" type="text" maxLength={100} placeholder="INFORME A DESCRIÇÃO" value={this.state.descricao} onChange={this.atualizarDescricao} required />
+                            </Form.Group>
+                            <Form.Group className="mb-3">
+                                <Form.Label htmlFor="ddlEstado">Estado</Form.Label>
+                                <Form.Select id="ddlEstado" value={this.state.idEstado} onChange={this.atualizarIdEstado}>
+                                    <option value="0" required>SELECIONE UM ESTADO</option>
+                                    {this.state.estados.map((estado) => {
+                                        const { idEstado, descricao } = estado;
+                                        return (<option key={idEstado} value={idEstado}>{descricao}</option>)
+                                    })}
+                                </Form.Select>
+                            </Form.Group>
+                            <Form.Group className="mb-3">
+                                <Form.Label htmlFor="ddlCidade">Cidade</Form.Label>
+                                <Form.Select id="ddlCidade" value={this.state.idCidade} onChange={this.atualizarIdCidade}>
+                                    <option value="0" required>SELECIONE UMA CIDADE</option>
+                                    {this.state.cidades.map((cidade) => {
+                                        const { idCidade, descricao } = cidade;
+                                        return (<option key={idCidade} value={idCidade}>{descricao}</option>)
+                                    })}
+                                </Form.Select>
+                            </Form.Group>
+                            <Form.Group className="mb-3" controlId="txtReferencia">
+                                <Form.Label>REFERÊNCIA</Form.Label>
+                                <Form.Control as="textarea" rows={3} maxLength={100} placeholder="INFORME A REFERÊNCIA" value={this.state.referencia} onChange={this.atualizarReferencia} />
+                            </Form.Group>
+                        </Form>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="secondary" onClick={this.fecharModal}>Fechar</Button>
+                        <Button variant="primary" type="submit" onClick={this.submit}>Salvar</Button>
+                    </Modal.Footer>
+                </Modal>
+                <div className="py-1"></div>
+                <Button variant="warning" type="submit" onClick={this.reset}>Novo</Button>
+                <InputGroup className="mb-3 py-1">
+                    <InputGroup.Text id="basic-addon1">@</InputGroup.Text>
+                    <Form.Control placeholder="FILTRO" onChange={this.filtroPontoTuristico}
+                    />
+                </InputGroup>
+
+                {this.renderTabela(pontosTuristicosCurrent)}
+
+                <div className="w-100 px-4 d-flex flex-row flex-wrap align-items-center justify-content-between">
+                    <div className="d-flex flex-row align-items-center">
+
+                        <h2 className={headerClass}>
+                            <strong className="text-secondary">{totalPontosTuristicos}</strong> Pontos Turísticos
+                        </h2>
+
+                        {currentPage && (
+                            <span className="current-page d-inline-block h-100 pl-4 text-secondary">
+                                Página <span className="font-weight-bold">{currentPage}</span> / <span className="font-weight-bold">{totalPages}</span>
+                            </span>
+                        )}
+
+                    </div>
+
+                    <div className="d-flex flex-row py-4 align-items-center">
+                        <Pagination totalRecords={totalPontosTuristicos} pageLimit={2} pageNeighbours={1} onPageChanged={this.onPageChanged} />
+                    </div>
+                </div>
+
             </div>
         )
     }
