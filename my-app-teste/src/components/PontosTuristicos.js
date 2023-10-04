@@ -68,6 +68,7 @@ class PontosTuristicos extends Component {
                 if (!resposta.ok) {
                     alert("Não foi possível cadastrar o ponto turístico! Error:" + resposta.statusText);
                 }
+                window.location.reload(true);
                 this.buscarPontoTuristico();
             });
     };
@@ -102,6 +103,7 @@ class PontosTuristicos extends Component {
                 if (!resposta.ok) {
                     alert("Não foi possível atualizar o ponto turístico! Error:" + resposta.statusText);
                 }
+                window.location.reload(true);
                 this.buscarPontoTuristico();
             });
     };
@@ -210,7 +212,7 @@ class PontosTuristicos extends Component {
         }
 
         this.reset();
-        this.fecharModal();
+        this.fecharModal();        
     };
 
     reset = () => {
@@ -230,14 +232,13 @@ class PontosTuristicos extends Component {
     abrirModal = () => {
         this.setState({
             modalAberta: true
-        });
+        });        
     };
 
     fecharModal = () => {
         this.setState({
             modalAberta: false
-        });
-        window.location.reload(true);
+        });       
     };
 
     filtroPontoTuristico = (e) => {
