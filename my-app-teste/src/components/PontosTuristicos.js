@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { Component } from 'react';
 import { Button, Table, Form } from 'react-bootstrap';
 import Modal from 'react-bootstrap/Modal';
 import InputGroup from 'react-bootstrap/InputGroup';
 
-class PontosTuristicos extends React.Component {
-    
+class PontosTuristicos extends Component {
+
     constructor(props) {
         super(props);
 
@@ -19,7 +19,7 @@ class PontosTuristicos extends React.Component {
             pontosTuristicosFiltro: [],
             estados: [],
             cidades: [],
-            modalAberta: false
+            modalAberta: false,
         }
     };
 
@@ -27,26 +27,26 @@ class PontosTuristicos extends React.Component {
         this.buscarPontoTuristico();
     };
 
-    componentWillUnmount() {};
+    componentWillUnmount() { };
 
-    buscarEstados = (idEstado) => {
-        fetch("http://localhost:54303/api/" + idEstado + "/estados")
+    buscarEstado = (idEstado) => {
+        fetch("http://localhost:54303/api/" + idEstado + "/estado")
             .then(resposta => resposta.json())
             .then(dados => {
                 this.setState({ estados: dados, cidades: [] })
             });
     };
 
-    buscarCidades = (idEstado) => {
-        fetch("http://localhost:54303/api/estados/" + idEstado + "/cidades")
+    buscarCidade = (idEstado) => {
+        fetch("http://localhost:54303/api/estado/" + idEstado + "/cidade")
             .then(resposta => resposta.json())
             .then(dados => {
-                this.setState({ cidades: dados })
+                this.setState({ cidades: dados, idCidade: idEstado === 0 ? 0 : this.state.idCidade })
             });
     };
 
     buscarPontoTuristico = () => {
-        fetch("http://localhost:54303/api/pontos-turisticos")
+        fetch("http://localhost:54303/api/ponto-turistico")
             .then(resposta => resposta.json())
             .then(dados => {
                 this.setState({ pontosTuristicos: dados, pontosTuristicosFiltro: dados })
@@ -54,7 +54,7 @@ class PontosTuristicos extends React.Component {
     };
 
     cadastrarPontoTuristico = (pontoTuristico) => {
-        fetch("http://localhost:54303/api/pontos-turisticos/novo",
+        fetch("http://localhost:54303/api/ponto-turistico/novo",
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -69,7 +69,7 @@ class PontosTuristicos extends React.Component {
     };
 
     carregarDadosPontoTuristico = (idPontoTuristico) => {
-        fetch("http://localhost:54303/api/" + idPontoTuristico + "/pontos-turisticos", { method: 'GET' })
+        fetch("http://localhost:54303/api/" + idPontoTuristico + "/ponto-turistico", { method: 'GET' })
             .then(resposta => resposta.json())
             .then(dado => {
                 this.setState({
@@ -81,14 +81,14 @@ class PontosTuristicos extends React.Component {
                     referencia: dado[0].referencia
                 });
 
-                this.buscarEstados(0);
-                this.buscarCidades(dado[0].idEstado);
+                this.buscarEstado(0);
+                this.buscarCidade(dado[0].idEstado);
                 this.abrirModal();
             });
     };
 
     atualizarPontoTuristico = (pontoTuristico) => {
-        fetch("http://localhost:54303/api/pontos-turisticos/atualizar/" + pontoTuristico.idPontoTuristico,
+        fetch("http://localhost:54303/api/ponto-turistico/atualizar/" + pontoTuristico.idPontoTuristico,
             {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -104,7 +104,7 @@ class PontosTuristicos extends React.Component {
 
     deletarPontoTuristico = (idPontoTuristico) => {
         if (window.confirm("Deseja realmente excluir ?")) {
-            fetch("http://localhost:54303/api/pontos-turisticos/" + idPontoTuristico + "/excluir", { method: 'DELETE' })
+            fetch("http://localhost:54303/api/ponto-turistico/" + idPontoTuristico + "/excluir", { method: 'DELETE' })
                 .then(resposta => {
                     if (!resposta.ok) {
                         alert("Não foi possível excluir o ponto turístico! Error:" + resposta.statusText);
@@ -139,13 +139,21 @@ class PontosTuristicos extends React.Component {
     };
 
     atualizarIdEstado = (e) => {
-        this.buscarCidades(e.target.value);
+        this.buscarCidade(e.target.value);
 
         this.setState(
             {
                 idEstado: e.target.value
             }
         );
+
+        if (parseInt(e.target.value) === 0) {
+            this.setState(
+                {
+                    idCidade: 0
+                }
+            );
+        }
     }
 
     atualizarIdCidade = (e) => {
@@ -157,7 +165,6 @@ class PontosTuristicos extends React.Component {
     }
 
     submit = () => {
-
         if (!this.state.nome) {
             alert("Informe o nome");
             document.getElementById('txtNome').focus();
@@ -170,13 +177,13 @@ class PontosTuristicos extends React.Component {
             return false;
         }
 
-        if (this.state.idEstado === 0) {
+        if (parseInt(this.state.idEstado) === 0) {
             alert("Informe o estado");
             document.getElementById('ddlEstado').focus();
             return false;
         }
 
-        if (this.state.idCidade === 0) {
+        if (parseInt(this.state.idCidade) === 0) {
             alert("Informe o cidade");
             document.getElementById('ddlCidade').focus();
             return false;
@@ -198,7 +205,6 @@ class PontosTuristicos extends React.Component {
         }
 
         this.reset();
-
         this.fecharModal();
     };
 
@@ -212,7 +218,7 @@ class PontosTuristicos extends React.Component {
             referencia: ''
         });
 
-        this.buscarEstados(0);
+        this.buscarEstado(0);
         this.abrirModal();
     };
 
@@ -278,6 +284,7 @@ class PontosTuristicos extends React.Component {
                 unique.push(elmento);
             }
         });
+
         return unique;
     }
 
@@ -311,6 +318,8 @@ class PontosTuristicos extends React.Component {
                         )
                     }
                 </tbody>
+
+
             </Table>
         )
     }
